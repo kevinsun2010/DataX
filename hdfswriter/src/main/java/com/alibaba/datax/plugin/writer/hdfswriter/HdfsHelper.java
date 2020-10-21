@@ -518,7 +518,8 @@ public  class HdfsHelper {
                             case STRING:
                             case VARCHAR:
                             case CHAR:
-                                recordList.add(column.asString());
+                            	//datax的hdfsWriter目前只支持指定列分隔符，没有行分隔符，数据存在 \n 的情况时，替换为空格，否则会在文本中换行，被识别为2条
+                                recordList.add(column.asString().replaceAll("\n"," "));
                                 break;
                             case BOOLEAN:
                                 recordList.add(column.asBoolean());
