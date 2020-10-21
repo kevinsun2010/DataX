@@ -1,0 +1,27 @@
+{
+    "name": "httpreader",
+    "parameter": {
+        "url": "",
+        "requestType": "",
+        "requestParams": [{"name":"name","value":"zhangsan"},{"name":"age","value":"25"}],
+        "column": [{
+                            "name":"id",
+                            "index": 0,
+                            "type": "long"
+                        },
+                        {
+                            "name":"name",
+                            "index": 1,
+                            "type": "string"
+                        },
+                        {
+                            "name":"age",
+                            "index": 2,
+                            "type": "int"
+                        }],
+        "encoding": "UTF-8",
+        "signType":"Ç©Ãû·½Ê½",
+        "havePage":"true",
+        "pageConfig":{"pageSize":"1000","pageNoColumn":"pageNo","pageSizeColumn":"pageSize", "totalPageColumn":"totalPage" }
+    }
+}

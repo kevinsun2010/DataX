@@ -1,0 +1,73 @@
+{
+	"job": {
+		"setting": {
+			"speed": {
+				"channel": 10
+			}
+		},
+		"content": [
+
+			{
+				"reader": {
+					"name": "httpreader",
+					"parameter": {
+						"url": "http://127.0.0.1:8080/users",
+						"requestType": "get",
+						"requestParam": [{
+							"name": "name",
+							"value": "zhangsan"
+						}, {
+							"name": "age",
+							"value": "25"
+						}],
+						"column": [{
+								"name": "owner",
+								"index": 0,
+								"type": "string"
+							},
+							{
+								"name": "tableName",
+								"index": 1,
+								"type": "string"
+							},
+							{
+								"name": "columnName",
+								"index": 2,
+								"type": "string"
+							}
+						],
+						"encoding": "UTF-8",
+						"signType": "signType",
+						"havePage": "true",
+						"pageSize": "10000",
+						"pageNoColumn": "pageNo",
+						"pageSizeColumn": "pageSize",
+						"pageTotalColumn": "pageTotal"
+						
+					}
+				},
+				"writer": {
+               "name":"hdfswriter","parameter":
+               {
+                  "column":
+                  [
+                     {
+                        "name":"owner","type":"string"
+                     },{
+                        "name":"tableName","type":"string"
+                     },{
+                        "name":"columnName","type":"string"
+                     }
+
+                  ],"defaultFS":"hdfs://nameservice1","fieldDelimiter":"\u0001","fileName":"test_http_reader","fileType":"text","hadoopConfig":
+                  {
+                     "dfs.client.failover.proxy.provider.nameservice1":"org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider","dfs.ha.namenodes.nameservice1":"nn1,nn2","dfs.namenode.rpc-address.nameservice1.nn1":"master.data.com:8020","dfs.namenode.rpc-address.nameservice1.nn2":"node01.data.com:8020","dfs.nameservices":"nameservice1"
+                  },"haveKerberos":"true","kerberosKeytabFilePath":"/home/devuser/devuser.keytab","kerberosPrincipal":"devuser@CDH.COM","path":"/user/hive/warehouse/dbtest.db/test_http_reader/bd_date=20200820","writeMode":"truncate"
+               }
+
+            }
+			}
+
+		]
+	}
+}
