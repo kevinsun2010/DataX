@@ -42,4 +42,10 @@ public class Key {
 
     public static  final String MUTATION_BUFFER_SPACE = "bufferSize";
     public static  final String SKIP_FAIL = "skipFail";
+    
+    public static  final String HAVE_KERBEROS = "haveKerberos";
+
+    public static  final String KERBEROS_KEYTAB_FILE_PATH = "kerberosKeytabFilePath";
+
+    public static  final String KERBEROS_PRINCIPAL = "kerberosPrincipal";
 }

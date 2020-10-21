@@ -1,11 +1,11 @@
 package com.q1.datax.plugin.writer.kudu11xwriter;
 
-import com.alibaba.datax.common.element.Column;
 import com.alibaba.datax.common.exception.DataXException;
 import com.alibaba.datax.common.util.Configuration;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.kudu.ColumnSchema;
 import org.apache.kudu.Schema;
 import org.apache.kudu.Type;
@@ -13,7 +13,9 @@ import org.apache.kudu.client.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,10 +50,50 @@ public class Kudu11xHelper {
         KuduClient kuduClient = null;
         try {
             String masterAddress = (String)conf.get(Key.KUDU_MASTER);
+          //是否有Kerberos认证
+            boolean haveKerberos = Boolean.parseBoolean((String) conf.get(Key.HAVE_KERBEROS));
+            if(haveKerberos){
+               String kerberosKeytabFilePath = (String) conf.get(Key.KERBEROS_KEYTAB_FILE_PATH);
+               String kerberosPrincipal = (String) conf.get(Key.KERBEROS_PRINCIPAL);
+                org.apache.hadoop.conf.Configuration hadoopConf = null;
+                hadoopConf = new org.apache.hadoop.conf.Configuration();
+                hadoopConf.set("hadoop.security.authentication" , "Kerberos");
+                UserGroupInformation.setConfiguration(hadoopConf);
+                try {
+    				UserGroupInformation.loginUserFromKeytab(kerberosPrincipal, kerberosKeytabFilePath);
+    			} catch (IOException e) {
+    				String message = String.format("kerberos认证失败,请确定kerberosKeytabFilePath[%s]和kerberosPrincipal[%s]是否填写正确",
+                            kerberosKeytabFilePath, kerberosPrincipal);
+                    LOG.error(message);
+    				e.printStackTrace();
+    			}
+                try {
+    				 kuduClient = UserGroupInformation.getLoginUser().doAs(
+    				        new PrivilegedExceptionAction<KuduClient>() {
+    				            @Override
+    				            public KuduClient run() throws Exception {
+    				                return new KuduClient.KuduClientBuilder(masterAddress)
+    				                		.defaultAdminOperationTimeoutMs((Long) conf.get(Key.KUDU_ADMIN_TIMEOUT))
+    				                        .defaultOperationTimeoutMs((Long)conf.get(Key.KUDU_SESSION_TIMEOUT))
+    				                        .build();
+    				            }
+    				        }
+    				);
+    			} catch (IOException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    				throw DataXException.asDataXException(Kudu11xWriterErrorcode.GET_KUDU_CONNECTION_ERROR, e);
+    			} catch (InterruptedException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    				throw DataXException.asDataXException(Kudu11xWriterErrorcode.GET_KUDU_CONNECTION_ERROR, e);
+    			}
+            }else {
             kuduClient = new KuduClient.KuduClientBuilder(masterAddress)
                     .defaultAdminOperationTimeoutMs((Long) conf.get(Key.KUDU_ADMIN_TIMEOUT))
                     .defaultOperationTimeoutMs((Long)conf.get(Key.KUDU_SESSION_TIMEOUT))
                     .build();
+            }
         } catch (Exception e) {
             throw DataXException.asDataXException(Kudu11xWriterErrorcode.GET_KUDU_CONNECTION_ERROR, e);
         }

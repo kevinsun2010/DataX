@@ -10,6 +10,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>kuduwriter</artifactId>
+    
+   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hadoop.version>2.7.1</hadoop.version>
+  </properties>
     <dependencies>
         <dependency>
             <groupId>com.alibaba.datax</groupId>
@@ -26,6 +31,11 @@
             <groupId>org.apache.kudu</groupId>
             <artifactId>kudu-client</artifactId>
             <version>1.11.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>${hadoop.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -45,6 +55,7 @@
             </exclusions>
             <scope>test</scope>
         </dependency>
+        
     </dependencies>
 
     <build>
