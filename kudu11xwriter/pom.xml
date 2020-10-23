@@ -9,8 +9,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>kuduwriter</artifactId>
-    
+    <artifactId>kudu11xwriter</artifactId>
+    <name>kudu11xwriter</name>
    <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hadoop.version>2.7.1</hadoop.version>

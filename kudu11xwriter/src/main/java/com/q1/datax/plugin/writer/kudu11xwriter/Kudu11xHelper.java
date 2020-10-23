@@ -52,6 +52,8 @@ public class Kudu11xHelper {
             String masterAddress = (String)conf.get(Key.KUDU_MASTER);
           //是否有Kerberos认证
             boolean haveKerberos = Boolean.parseBoolean((String) conf.get(Key.HAVE_KERBEROS));
+            long kuduAdminTimeout=(int)conf.get(Key.KUDU_ADMIN_TIMEOUT);
+            long kuduSessionTimeout=(int)conf.get(Key.KUDU_SESSION_TIMEOUT);
             if(haveKerberos){
                String kerberosKeytabFilePath = (String) conf.get(Key.KERBEROS_KEYTAB_FILE_PATH);
                String kerberosPrincipal = (String) conf.get(Key.KERBEROS_PRINCIPAL);
@@ -67,14 +69,15 @@ public class Kudu11xHelper {
                     LOG.error(message);
     				e.printStackTrace();
     			}
+               
                 try {
     				 kuduClient = UserGroupInformation.getLoginUser().doAs(
     				        new PrivilegedExceptionAction<KuduClient>() {
     				            @Override
     				            public KuduClient run() throws Exception {
     				                return new KuduClient.KuduClientBuilder(masterAddress)
-    				                		.defaultAdminOperationTimeoutMs((Long) conf.get(Key.KUDU_ADMIN_TIMEOUT))
-    				                        .defaultOperationTimeoutMs((Long)conf.get(Key.KUDU_SESSION_TIMEOUT))
+    				                		.defaultAdminOperationTimeoutMs(kuduAdminTimeout)
+    				                        .defaultOperationTimeoutMs(kuduSessionTimeout)
     				                        .build();
     				            }
     				        }
@@ -89,9 +92,11 @@ public class Kudu11xHelper {
     				throw DataXException.asDataXException(Kudu11xWriterErrorcode.GET_KUDU_CONNECTION_ERROR, e);
     			}
             }else {
+            	
+     
             kuduClient = new KuduClient.KuduClientBuilder(masterAddress)
-                    .defaultAdminOperationTimeoutMs((Long) conf.get(Key.KUDU_ADMIN_TIMEOUT))
-                    .defaultOperationTimeoutMs((Long)conf.get(Key.KUDU_SESSION_TIMEOUT))
+                    .defaultAdminOperationTimeoutMs(kuduAdminTimeout)
+                    .defaultOperationTimeoutMs(kuduSessionTimeout)
                     .build();
             }
         } catch (Exception e) {

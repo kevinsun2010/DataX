@@ -69,6 +69,8 @@
         <module>opentsdbreader</module>
         <module>cassandrareader</module>
         <module>gdbreader</module>
+        <module>hbase20xsqlreader</module>
+        <module>httpreader</module>
 
         <!-- writer -->
         <module>mysqlwriter</module>
@@ -98,13 +100,13 @@
         <module>gdbwriter</module>
         <module>cassandrawriter</module>
         <module>clickhousewriter</module>
+        <module>hbase20xsqlwriter</module>
+        <module>kudu11xwriter</module>
         <!-- common support module -->
         <module>plugin-rdbms-util</module>
         <module>plugin-unstructured-storage-util</module>
-        <module>hbase20xsqlreader</module>
-        <module>hbase20xsqlwriter</module>
-        <module>kuduwriter</module>
-        <module>httpreader</module>
+        
+        
   </modules>
 
     <dependencyManagement>

@@ -1,0 +1,89 @@
+{
+   "job":
+   {
+      "content":
+      [
+         {
+            "reader":
+            {
+               "name":"oraclereader","parameter":
+               {
+                  "column":
+                  [
+                     "JE_CATEGORY_NAME","LANGUAGE","SOURCE_LANG"
+                 ],"connection":
+                  [
+                     {
+                        "jdbcUrl":
+                        [
+                           "jdbc:oracle:thin:@9.134.53.179:1522:deverp"
+                        ],"table":
+                        [
+                           "GL.GL_JE_CATEGORIES_TL"
+                        ]
+
+                     }
+
+                  ],"password":"apple2020","username":"apps","where":"1=1"
+               }
+
+            },"writer":
+            {
+  "name": "kudu11xwriter",
+  "parameter": {
+    "kuduConfig": {
+      "kudu.master_addresses": "master.data.com:7051,node02.data.com:7051,node03.data.com:7051",
+      "timeout": 60000,
+      "sessionTimeout": 60000
+
+    },
+    "table": "dbtest.kudu_writer_test",
+    "replicaCount": 3,
+    "truncate": false,
+    "writeMode": "upsert",
+    "partition": {
+      "hash": {
+        "column": [
+          "JE_CATEGORY_NAME"
+        ],
+        "number": 3
+      }
+    },
+    "column": [
+      {
+        "index": 0,
+        "name": "JE_CATEGORY_NAME",
+        "type": "string",
+        "primaryKey": true
+      },
+      {
+        "index": 1,
+        "name": "LANGUAGE",
+        "type": "string",
+        "compress": "DEFAULT_COMPRESSION",
+        "encoding": "AUTO_ENCODING",
+        "comment": "注解xxxx"
+      }
+    ],
+    "batchSize": 1024,
+    "bufferSize": 2048,
+    "skipFail": false,
+    "encoding": "UTF-8",
+    "haveKerberos":"true",
+    "kerberosKeytabFilePath":"/home/devuser/devuser.keytab",
+    "kerberosPrincipal":"devuser@CDH.COM"
+  }
+}
+    }
+      ],"setting":
+      {
+         "speed":
+         {
+            "byte":10485760,"channel":"5"
+         }
+
+      }
+
+   }
+
+}
