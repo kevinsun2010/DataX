@@ -16,6 +16,7 @@ public enum HttpReaderErrorCode implements ErrorCode {
 	JSON_TYPE_NOT_FIND_ERROR("HttpReader-09", "您未配置jsonType值"),
 	JSON_PATH_NOT_FIND_ERROR("HttpReader-10", "您未配置jsonPath值"),
 	
+	
 	ILLEGAL_VALUE("HttpReader-05", "值错误"),
 	REQUIRED_VALUE("HttpReader-06", "您缺失了必须填写的参数值."),
     BAD_CONFIG_VALUE("HttpReader-00", "您配置的值不合法.");

@@ -10,8 +10,12 @@ public final class Key {
     public static final String PAGE_SIZE = "pageSize";
     public static final String PAGE_TOTAL ="pageTotal";
     public static final String  COLUMN="column";
-    public static final String JSONTYPE= "jsonType";
-    public static final String JSONPATH= "jsonPath";
+    public static final String JSON_TYPE= "jsonType";
+    public static final String JSON_PATH= "jsonPath";
+    
+    public static final String SIGN_TYPE= "signType";//签名方式
+    public static final String SIGN_PARAM= "signParam";//签名参数
+   
     
    
 }

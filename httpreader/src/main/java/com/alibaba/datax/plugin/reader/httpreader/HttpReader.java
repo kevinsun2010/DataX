@@ -51,10 +51,14 @@ public class HttpReader extends Reader {
 
         public void validate(){
         	url = this.readerOriginConfig.getNecessaryValue(Key.URL,HttpReaderErrorCode.REQUEST_URL_NOT_FIND_ERROR);
-        	requestParams = this.readerOriginConfig.getNecessaryValue(Key.REQUEST_PARAM,HttpReaderErrorCode.REQUEST_PARAM_NOT_FIND_ERROR);
         	requestType=this.readerOriginConfig.getNecessaryValue(Key.REQUEST_TYPE,HttpReaderErrorCode.REQUEST_TYPE_NOT_FIND_ERROR);
-        	this.readerOriginConfig.getNecessaryValue(Key.JSONTYPE,HttpReaderErrorCode.JSON_TYPE_NOT_FIND_ERROR);
-        	this.readerOriginConfig.getNecessaryValue(Key.JSONPATH,HttpReaderErrorCode.JSON_PATH_NOT_FIND_ERROR);
+        	this.readerOriginConfig.getNecessaryValue(Key.JSON_TYPE,HttpReaderErrorCode.JSON_TYPE_NOT_FIND_ERROR);
+        	this.readerOriginConfig.getNecessaryValue(Key.JSON_PATH,HttpReaderErrorCode.JSON_PATH_NOT_FIND_ERROR);
+        	this.readerOriginConfig.getNecessaryValue(Key.COLUMN,HttpReaderErrorCode.COLUMN_NOT_FIND_ERROR);
+        	String havePage=this.readerOriginConfig.getUnnecessaryValue(Key.HAVE_PAGE,"false",HttpReaderErrorCode.CONFIG_INVALID_EXCEPTION);
+        	if(Boolean.parseBoolean(havePage)) {
+        		this.readerOriginConfig.getNecessaryValue(Key.PAGE_SIZE,HttpReaderErrorCode.CONFIG_INVALID_EXCEPTION);
+        	}
         }
         
         
@@ -78,7 +82,6 @@ public class HttpReader extends Reader {
             List<Configuration> readerSplitConfigs = new ArrayList<Configuration>();
             // warn:每个slice拖且仅拖一个文件,
             int splitNumber = adviceNumber;
-            //int splitNumber = this.sourceHttpRequests.size();
             if (0 == splitNumber) {
                 throw DataXException.asDataXException(HttpReaderErrorCode.REQUEST_URL_NOT_FIND_ERROR,
                         String.format("未能找到待請求的地址,请确认您的配置项url: %s", this.readerOriginConfig.getString(Key.URL)));
@@ -90,7 +93,6 @@ public class HttpReader extends Reader {
                 splitedConfig.set(Constant.SOURCE_HTTP_REQUESTS, requests);
                 readerSplitConfigs.add(splitedConfig);
             }
-
             return readerSplitConfigs;
         }
 
@@ -99,7 +101,6 @@ public class HttpReader extends Reader {
             List<List<T>> splitedList = new ArrayList<List<T>>();
             int averageLength = sourceList.size() / adviceNumber;
             averageLength = averageLength == 0 ? 1 : averageLength;
-
             for (int begin = 0, end = 0; begin < sourceList.size(); begin = end) {
                 end = begin + averageLength;
                 if (end > sourceList.size()) {
@@ -155,9 +156,13 @@ public class HttpReader extends Reader {
 
                 if(specifiedRequestType.equalsIgnoreCase(Constant.GET)) {
                 	httpHelper.doGetStartRead(httpRequest,this.taskConfig, recordSender, this.getTaskPluginCollector());
-                }else if(specifiedRequestType.equalsIgnoreCase(Constant.PUT)){
+                }
+                else if(specifiedRequestType.equalsIgnoreCase(Constant.PUT))
+                {
                 	httpHelper.doPostStartRead(httpRequest,this.taskConfig, recordSender, this.getTaskPluginCollector());
-                }else {
+                }
+                else 
+                {
 
                     String message = "HttpReader插件目前支持GET, PUT两种HTTP请求方式," +
                             "请将requestType选项的值配置为GET, PUT";

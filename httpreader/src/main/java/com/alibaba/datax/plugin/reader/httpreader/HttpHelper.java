@@ -5,10 +5,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.codec.digest.HmacUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -48,6 +54,75 @@ public class HttpHelper {
     	LOG.info(String.format("taskConfig details:%s", JSON.toJSONString(taskConfig)));
 	}
 
+    private static Map<String, Object> getUrlParams(String url) {
+		Map<String, Object> map = new HashMap<String, Object>(0);
+		
+		if (StringUtils.isBlank(url)) {
+			return map;
+		}
+		String param=url.substring(url.lastIndexOf("?")+1);
+		
+		if (StringUtils.isBlank(param)) {
+			return map;
+		}
+		String[] params = param.split("&");
+		for (int i = 0; i < params.length; i++) {
+			String[] p = params[i].split("=");
+			if (p.length == 2) {
+				map.put(p[0], p[1]);
+			}
+		}
+		return map;
+    }
+
+    
+    private  String auth(String url,String method,String signParam) {
+    	
+    	Map<String,Object> requestParamMap=getUrlParams(url);
+    	JSONObject  jsonObject=JSONObject.parseObject(signParam);
+		String appId=jsonObject.getString("appId");
+		String key=jsonObject.getString("key");
+		
+		//String method="GET";//是否区分大小写
+		String keyTime=System.currentTimeMillis()+100000+"";//100s有效期
+		
+		String sign=encry(requestParamMap,method,keyTime,appId,key);
+		
+		Map<String,Object> authMap=new HashMap<String,Object>();
+		//Map 对象存入 用户名,密码,电话号码
+		authMap.put("sign", sign);
+		authMap.put("keyTime",keyTime );
+		authMap.put("appId", appId);
+		authMap.putAll(requestParamMap);
+		
+		//Map 转成  JSONObject 字符串
+		JSONObject jsonObj=new JSONObject(authMap);
+		String auth=jsonObj.toString();
+		return  auth;
+    }
+    
+    
+    private  String encry(Map<String,Object> param,String method,String keyTime,String appId,String key) {
+		String signKey=HmacUtils.hmacSha1Hex(key, keyTime);
+		String httpString =method + "\n" +getParamStr(param);
+		String toSign=keyTime+"\n"+DigestUtils.sha1Hex(httpString);
+		String sign= HmacUtils.hmacSha1Hex(signKey, toSign);
+		return sign;
+	}
+	
+	
+	private  String getParamStr(Map<String,Object> param) {
+		Set<String> set=param.keySet();
+        Object[] arr= set.toArray();
+        Arrays.sort(arr);
+		StringBuffer sbParams=new StringBuffer();
+		 for(Object key:arr)
+		 {
+			 sbParams.append(key + "=" + param.get(key) +"&");
+	     }
+		return sbParams.toString().substring(0, sbParams.length()-1);
+	}
+	
     
 	public   List<String> getAllHttpRequests(String url, String requestType,String requestParams,Configuration readerOriginConfig) {
 		List<String>   allHttpRequests=new ArrayList<String>();
@@ -56,25 +131,30 @@ public class HttpHelper {
 		StringBuffer sbHttpRequestUrl=new StringBuffer();
 		sbHttpRequestUrl.append(url);
 		sbHttpRequestUrl.append("?");
+		
 		StringBuffer sbParams=new StringBuffer();
-		if(Constant.GET.equalsIgnoreCase(requestType)) {
-			JSONArray  paramsArray=JSONObject.parseArray(requestParams);
-			// 遍历JSONArray
-			for (Iterator<Object> iterator = paramsArray.iterator(); iterator.hasNext(); ) {
-				JSONObject next = (JSONObject) iterator.next();
-				String parmasName=next.getString("name");
-				String parmasValue=next.getString("value");
-				sbParams.append(parmasName);
-				sbParams.append("=");
-				sbParams.append(parmasValue);
-				sbParams.append("&");
-				//System.err.println("name ===>>> " + next.getString("name"));
-				//System.err.println("value ===>>> " + next.getString("value"));
+		requestType=requestType.toUpperCase();
+		if(Constant.GET.equalsIgnoreCase(requestType)) 
+		{
+			if(StringUtils.isBlank(requestParams)==false) 
+			{
+				JSONArray  paramsArray=JSONObject.parseArray(requestParams);
+				// 遍历JSONArray
+				for (Iterator<Object> iterator = paramsArray.iterator(); iterator.hasNext(); ) {
+					JSONObject next = (JSONObject) iterator.next();
+					String parmasName=next.getString("name");
+					String parmasValue=next.getString("value");
+					sbParams.append(parmasName);
+					sbParams.append("=");
+					sbParams.append(parmasValue);
+					sbParams.append("&");
+				}
 			}
 			boolean havePage=Boolean.parseBoolean(readerOriginConfig.getString(Key.HAVE_PAGE));
-			if(havePage) {
+			if(havePage) 
+			{
 				int pageNo=Constant.DEFAULT_FRIST_PAGE_NO;
-				int pageSize=Integer.parseInt(readerOriginConfig.getString(Key.PAGE_SIZE,Constant.DEFAULT_PAGE_SIZE+""));
+				int pageSize=Integer.parseInt(readerOriginConfig.getString(Key.PAGE_SIZE,Constant.DEFAULT_PAGE_SIZE));
 				sbParams.append("pageNo");
 				sbParams.append("=");
 				sbParams.append(pageNo);
@@ -83,47 +163,60 @@ public class HttpHelper {
 				sbParams.append("=");
 				sbParams.append(pageSize);
 				sbParams.append("&");
-				
 			}
 			sbHttpRequestUrl.append(sbParams);
 			String httpRequestUrl=sbHttpRequestUrl.toString().substring(0, sbHttpRequestUrl.length()-1);
-			//System.out.println("sbHttpRequestUrl=="+sbHttpRequestUrl.toString());
-			if(havePage) {
+			if(havePage) 
+			{
+				String signType=readerOriginConfig.getString(Key.SIGN_TYPE,Constant.DEFAULT_SIGN_TYPE);
+				String signParam=readerOriginConfig.getString(Key.SIGN_PARAM);
+				String  resultjson=null;
+				if(Constant.SIGN_TYPE_01.equals(signType)) {
+					String auth=auth(httpRequestUrl,requestType,signParam);
+					Map<String,String>   headerMap=new HashMap<String,String>();
+					headerMap.put(Constant.HTTP_AUTH_KEY, auth);
+					resultjson=doGet(httpRequestUrl,headerMap);
+				}else 
+				{
+			      resultjson=doGet(httpRequestUrl,null);
+				}
 				//首页请求，获取totalPage
-	    		String  resultjson=doGet(httpRequestUrl);
 	    		Configuration   responseResultConfig=Configuration.from(resultjson);    
 	    		int pageTotal=Integer.parseInt(responseResultConfig.getString(Key.PAGE_TOTAL));
-	    		
-	    		for (int i = 1; i <= pageTotal; i++) {
+	    		for (int i = 1; i <= pageTotal; i++) 
+	    		{
 	    			String urlForPage=httpRequestUrl.replaceFirst("pageNo=1", "pageNo="+i);
 	    			allHttpRequests.add(urlForPage);
 				}
 				
-			}else {
+			}
+			else 
+			{
 				allHttpRequests.add(httpRequestUrl);
 			}
 		}
-		
 		return allHttpRequests;
-		
 	}
     
 	
     
-	/*
-	 * List<NameValuePair> params = Lists.newArrayList(); params.add(new
-	 * BasicNameValuePair("cityEname", "henan")); String str = ""; //转换为键值对 str =
-	 * EntityUtils.toString(new UrlEncodedFormEntity(params, Consts.UTF_8));
-	 * System.out.println(str); HttpGet httpGet = new HttpGet(url + "?" + str);
-	 */
-    
-    public static String doGet(String url) {
+    public static String doGet(String url,Map<String,String> headerMap) {
         try {
             HttpClient client = new DefaultHttpClient();
             //发送get请求
             HttpGet request = new HttpGet(url);
+            
+            if(headerMap !=null) 
+            {
+    			  for(Map.Entry<String, String> entry : headerMap.entrySet())
+    			  {
+    				  String mapKey =entry.getKey(); 
+    				  String mapValue =  entry.getValue();
+    				  request.addHeader(mapKey, mapValue);
+    			      //System.out.println(mapKey+":"+mapValue); 
+    			   }
+            }
             HttpResponse response = client.execute(request);
-
             /**请求发送成功，并得到响应**/
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 /**读取服务器返回过来的json字符串数据**/
@@ -248,7 +341,7 @@ public class HttpHelper {
 
 	public void doPostStartRead(String httpRequest, Configuration taskConfig, RecordSender recordSender,
 			TaskPluginCollector taskPluginCollector) {
-		// 
+		//数据拉取大部分是GET请求，暂时不支持PUT请求 
 		
 	}
 
@@ -256,7 +349,6 @@ public class HttpHelper {
 			TaskPluginCollector taskPluginCollector) {
 		String columnConfig=taskConfig.getNecessaryValue(Key.COLUMN, HttpReaderErrorCode.COLUMN_NOT_FIND_ERROR);
 		JSONArray  paramsArray=JSONObject.parseArray(columnConfig);
-		// 遍历JSONArray
 		List<String>  columnNameList=new ArrayList<String>();
 		//注意 后续要考虑columnNameList 需要根据index排序
 		for (Iterator<Object> iterator = paramsArray.iterator(); iterator.hasNext(); ) {
@@ -270,12 +362,24 @@ public class HttpHelper {
 		// warn: no default value '\N'
 				String nullFormat = taskConfig.getString(com.alibaba.datax.plugin.unstructuredstorage.reader.Key.NULL_FORMAT);
 		
-		String jsonType = taskConfig.getString(Key.JSONTYPE);
-		String jsonPath = taskConfig.getString(Key.JSONPATH);
-		
+		String jsonType = taskConfig.getString(Key.JSON_TYPE);
+		String jsonPath = taskConfig.getString(Key.JSON_PATH);
 				
 		// Get请求数据 读取，解析json数据
-		String resultJsonData=doGet(httpRequest);
+		String  resultJsonData=null;
+		String signType=taskConfig.getString(Key.SIGN_TYPE,Constant.DEFAULT_SIGN_TYPE);
+		if(Constant.SIGN_TYPE_01.equals(signType)) {
+			String signParam=taskConfig.getString(Key.SIGN_PARAM);
+			String auth=auth(httpRequest,Constant.GET,signParam);
+			
+			Map<String,String>   headerMap=new HashMap<String,String>();
+			headerMap.put("auth", auth);
+			resultJsonData=doGet(httpRequest,headerMap);
+		}
+		else 
+		{
+			resultJsonData=doGet(httpRequest,null);
+		}
 		JSONObject jsonObject = JSON.parseObject(resultJsonData);
 		String jsonPathContext =  JSONPath.eval(jsonObject, jsonPath).toString();
 		if(Constant.JSON_TYPE_ARRAY.equalsIgnoreCase(jsonType)) {
@@ -286,16 +390,18 @@ public class HttpHelper {
 				parseRowsList=new ArrayList<String>();
 				for (String columnName : columnNameList) {
 					String columnValue=next.getString(columnName);
+					if(columnValue==null) {
+						columnValue="null";
+					}
 					parseRowsList.add(columnValue);
 				}
-				
 				String [] parseRowsArray=parseRowsList.toArray(new String[parseRowsList.size()]);
 				UnstructuredStorageReaderUtil.transportOneRecord(recordSender,
 						column, parseRowsArray, nullFormat, taskPluginCollector);
-				
 			}
-			
-		}else if(Constant.JSON_TYPE_OBJECT.equalsIgnoreCase(jsonType)) {
+		}
+		else if(Constant.JSON_TYPE_OBJECT.equalsIgnoreCase(jsonType)) 
+		{
 			JSONObject dataJsonObject = JSON.parseObject(jsonPathContext);
 			List<String>  parseRowsList=null;
 			parseRowsList=new ArrayList<String>();
@@ -307,74 +413,6 @@ public class HttpHelper {
 			UnstructuredStorageReaderUtil.transportOneRecord(recordSender,
 					column, parseRowsArray, nullFormat, taskPluginCollector);
 			
-		}else {
-			//抛出异常信息，前面也同时做配置校验
-			
 		}
-		
-		/*
-		 * Configuration resultJsonDataConfig=Configuration.from(resultJsonData);
-		 * JSONArray dataJsonArray=(JSONArray)
-		 * resultJsonDataConfig.get(Constant.DATA_JSON_LIST_KEY); List<String>
-		 * parseRowsList=null; for (Iterator<Object> iterator =
-		 * dataJsonArray.iterator(); iterator.hasNext(); ) { JSONObject next =
-		 * (JSONObject) iterator.next(); parseRowsList=new ArrayList<String>(); for
-		 * (String columnName : columnNameList) { String
-		 * columnValue=next.getString(columnName); parseRowsList.add(columnValue); }
-		 * 
-		 * String [] parseRowsArray=parseRowsList.toArray(new
-		 * String[parseRowsList.size()]);
-		 * UnstructuredStorageReaderUtil.transportOneRecord(recordSender, column,
-		 * parseRowsArray, nullFormat, taskPluginCollector);
-		 * 
-		 * }
-		 */
-		
-		//解析配置参数，获取数据
-		/*
-		 * UnstructuredStorageReaderUtil.transportOneRecord(recordSender, column,
-		 * parseRows, nullFormat, taskPluginCollector);
-		 */
-		//System.out.println("resultJsonData==="+resultJsonData);
-		
 	}
-	
-	
-	
-	
-	  
-	
-	
-
-
-	
-	
-	public static void main(String[] args) {
-		//String requestParams="[{\"name\":\"name\",\"value\":\"zhangsan\"},{\"name\":\"age\",\"value\":\"25\"}]";
-		//String url=getFullHttpRequestUrl("http://www.baidu.com","GET",requestParams);
-		//getAllHttpRequests(url,"GET");
-		
-		//String jsonresult=doGet("http://127.0.0.1:8080/users1?pageNo=1&pageSize=10");
-		//System.out.println("jsonresult=="+jsonresult);
-		
-		/*
-		 * String column="[\"id\",\"name\",\"age\"]"; JSONArray
-		 * paramsArray=JSONObject.parseArray(column); // 遍历JSONArray for
-		 * (Iterator<Object> iterator = paramsArray.iterator(); iterator.hasNext(); ) {
-		 * String next = (String) iterator.next(); System.out.println(next.toString());
-		 * }
-		 */
-		//String url="http://127.0.0.1:8080/users?name=zhangsan&age=25&pageNo=1&pagesize=1000";
-		//doGet(url);
-		
-		String resultJsonData="{	\"list\": [{			\"owner\": \"SYS\",			\"tableName\": \"C_OBJ#\",			\"columnName\": \"OBJ#\",			\"dataType\": \"NUMBER\"		},		{			\"owner\": \"SYS\",			\"tableName\": \"TAB$\",			\"columnName\": \"FILE#\",			\"dataType\": \"NUMBER\"		},		{			\"owner\": \"SYS\",			\"tableName\": \"TAB$\",			\"columnName\": \"DEGREE\",			\"dataType\": \"NUMBER\"		},		{			\"owner\": \"SYS\",			\"tableName\": \"TAB$\",			\"columnName\": \"OBJ#\",			\"dataType\": \"NUMBER\"		}	],	\"pageTotal\": 2014,	\"total\": 0,	\"pageSize\": 1000,	\"pageNo\": 1}";
-		Configuration   resultJsonDataConfig=Configuration.from(resultJsonData);
-		JSONArray  paramsArray=(JSONArray) resultJsonDataConfig.get("list");
-		System.out.println(paramsArray);
-	}
-	
-	
-	
-	
-     
 }
